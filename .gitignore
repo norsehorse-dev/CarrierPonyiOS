@@ -1,0 +1,40 @@
+.DS_Store
+*.xcuserstate
+xcuserdata/
+build/
+DerivedData/
+*.xcworkspace/xcuserdata/
+.swiftpm/
+Package.resolved
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+keystore.properties
+*.p12
+*.mobileprovision
+*.cer
+GoogleService-Info.plist
+
+Claude outputs/
+_to_delete/
+.claude_stage/
+
+# --- store screenshots and fastlane (3.2.0) ---
+.env
+*.p8
+vendor/bundle
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/screenshots_framed/
+fastlane/test_output/
+fastlane/derivedData/
+fastlane/fonts/
+fastlane/metadata/review_information/
+fastlane/store_headers/
+
+# Planning and design notes stay local.
+CarrierPony-*.md
