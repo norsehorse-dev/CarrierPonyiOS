@@ -81,43 +81,56 @@ struct ConversationListView: View {
         }
     }
 
+    /// Error, contact request and waiting banners, in that order.
+    @ViewBuilder private var banners: some View {
+        if let error = store.lastError {
+            ErrorBanner(message: error) { store.clearError() }
+        }
+        if contactRequests > 0, let onPair {
+            Button(action: onPair) {
+                HStack(spacing: 10) {
+                    Image(systemName: "person.badge.plus")
+                        .font(.footnote)
+                    Text("Someone wants to connect. Tap to review.")
+                        .font(.footnote.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                }
+                .foregroundStyle(CPTheme.accent)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.secondarySystemBackground))
+                .overlay(alignment: .bottom) {
+                    Rectangle().fill(CPTheme.hairline).frame(height: 0.5)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+        if store.heldCount > 0 {
+            InfoBanner(text: "\(store.heldCount) waiting from someone whose pairing hasn't finished on this device. They open on their own once it does.")
+        }
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
             VStack(spacing: 0) {
-                if let error = store.lastError {
-                    ErrorBanner(message: error) { store.clearError() }
-                }
-                if contactRequests > 0, let onPair {
-                    Button(action: onPair) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "person.badge.plus")
-                                .font(.footnote)
-                            Text("Someone wants to connect. Tap to review.")
-                                .font(.footnote.weight(.semibold))
-                                .fixedSize(horizontal: false, vertical: true)
-                            Spacer(minLength: 0)
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                        }
-                        .foregroundStyle(CPTheme.accent)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(.secondarySystemBackground))
-                        .overlay(alignment: .bottom) {
-                            Rectangle().fill(CPTheme.hairline).frame(height: 0.5)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-                if store.heldCount > 0 {
-                    InfoBanner(text: "\(store.heldCount) waiting from someone whose pairing hasn't finished on this device. They open on their own once it does.")
-                }
+                // With no conversations there is no list, so the banners sit above
+                // the empty state. Otherwise they are the first rows of the list:
+                // views stacked above a List confuse the large title, which then
+                // drew over the banner or left a gap after coming back to the app.
+                if orderedItems.isEmpty { banners }
                 Group {
                     if orderedItems.isEmpty {
                         EmptyInbox { showingNewMessage = true }
                     } else {
                         List {
+                            Group { banners }
+                                .buttonStyle(.borderless)
+                                .listRowInsets(EdgeInsets())
+                                .listRowSeparator(.hidden)
                             ForEach(orderedItems) { item in
                                 switch item {
                                 case .group(let group, _):

@@ -113,13 +113,19 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
-                if !app.appLock.isLocked { Task { await app.start() } }
+                if !app.appLock.isLocked {
+                    PushService.shared.clearDelivered()
+                    Task { await app.start() }
+                }
             case .background:
                 app.stop()
                 app.lockForBackground()
             default:
                 break
             }
+        }
+        .onChange(of: app.appLock.isLocked) { _, locked in
+            if !locked, scenePhase == .active { PushService.shared.clearDelivered() }
         }
     }
 

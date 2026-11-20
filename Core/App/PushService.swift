@@ -23,6 +23,16 @@ final class PushService {
         onToken?(hex)
     }
 
+    /// Clear this app's notifications and badge. They carry no content and all
+    /// say the same thing, so once the app is open and unlocked none of them has
+    /// anything left to tell. Without this, opening the app from one notification
+    /// left the others sitting in Notification Center.
+    func clearDelivered() {
+        let center = UNUserNotificationCenter.current()
+        center.removeAllDeliveredNotifications()
+        center.setBadgeCount(0)
+    }
+
     /// Ask for permission (once, remembered by the system) and register for a token.
     func requestAndRegister() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, _ in
