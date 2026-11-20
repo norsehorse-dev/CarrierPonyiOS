@@ -332,59 +332,6 @@
         }
       }
     },
-    "%lld waiting from someone whose pairing hasn't finished on this device. They open on their own once it does." : {
-      "comment" : "Banner on the conversation list when inbox messages cannot be opened yet because the sender's pairing has not finished. The argument is the count.",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld Nachricht(en) warten von jemandem, dessen Koppeln auf diesem Gerät noch nicht abgeschlossen ist. Sie öffnen sich von selbst, sobald es fertig ist."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld mensaje(s) en espera de alguien cuyo emparejamiento no ha terminado en este dispositivo. Se abrirán solos cuando termine."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld message(s) en attente de quelqu'un dont l'appairage n'est pas terminé sur cet appareil. Ils s'ouvriront tout seuls une fois terminé."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld messaggio/i in attesa da qualcuno il cui abbinamento non è completo su questo dispositivo. Si apriranno da soli quando lo sarà."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "この端末でペアリングが完了していない相手から %lld 件のメッセージが待機中です。完了すると自動的に開きます。"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld mensagem(ns) aguardando de alguém cujo pareamento não terminou neste dispositivo. Elas abrem sozinhas quando terminar."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ожидает сообщений: %lld от того, чьё сопряжение на этом устройстве ещё не завершено. Они откроются сами, когда оно завершится."
-          }
-        },
-        "zh" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "有 %lld 条消息来自尚未在此设备上完成配对的人。配对完成后会自动打开。"
-          }
-        }
-      }
-    },
     "1 member" : {
       "comment" : "A description of a group with 1 member.",
       "extractionState" : "stale",
@@ -18758,6 +18705,226 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的密封密钥已重新生成并与联系人共享。请等待约一分钟，然后再次尝试发送。"
+          }
+        }
+      }
+    },
+    "%lld messages can't be opened yet. They are from someone who isn't in your contacts on this device. They open by themselves if you pair with them." : {
+      "comment" : "Banner on the conversation list when inbox messages cannot be opened yet because the sender is not a contact on this device. The argument is the count.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld message can't be opened yet. It is from someone who isn't in your contacts on this device. It opens by itself if you pair with them."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld messages can't be opened yet. They are from someone who isn't in your contacts on this device. They open by themselves if you pair with them."
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Nachricht kann noch nicht geöffnet werden. Sie stammt von jemandem, der auf diesem Gerät nicht in deinen Kontakten ist. Sie öffnet sich von selbst, wenn du dich mit dieser Person koppelst."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Nachrichten können noch nicht geöffnet werden. Sie stammen von jemandem, der auf diesem Gerät nicht in deinen Kontakten ist. Sie öffnen sich von selbst, wenn du dich mit dieser Person koppelst."
+                }
+              }
+            }
+          }
+        },
+        "es" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld mensaje aún no se puede abrir. Es de alguien que no está en tus contactos en este dispositivo. Se abrirá solo si te vinculas con esa persona."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld mensajes aún no se pueden abrir. Son de alguien que no está en tus contactos en este dispositivo. Se abrirán solos si te vinculas con esa persona."
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld message ne peut pas encore être ouvert. Il vient d'une personne qui n'est pas dans vos contacts sur cet appareil. Il s'ouvrira tout seul si vous vous associez avec elle."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld messages ne peuvent pas encore être ouverts. Ils viennent d'une personne qui n'est pas dans vos contacts sur cet appareil. Ils s'ouvriront tout seuls si vous vous associez avec elle."
+                }
+              }
+            }
+          }
+        },
+        "it" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld messaggio non può ancora essere aperto. Proviene da qualcuno che non è tra i tuoi contatti su questo dispositivo. Si aprirà da solo se ti abbini a questa persona."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld messaggi non possono ancora essere aperti. Provengono da qualcuno che non è tra i tuoi contatti su questo dispositivo. Si apriranno da soli se ti abbini a questa persona."
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 件のメッセージはまだ開けません。この端末の連絡先に登録されていない相手から届いたものです。その相手とペアリングすると自動的に開きます。"
+                }
+              }
+            }
+          }
+        },
+        "pt" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld mensagem ainda não pode ser aberta. Ela é de alguém que não está nos seus contatos neste dispositivo. Ela abre sozinha se você emparelhar com essa pessoa."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld mensagens ainda não podem ser abertas. Elas são de alguém que não está nos seus contatos neste dispositivo. Elas abrem sozinhas se você emparelhar com essa pessoa."
+                }
+              }
+            }
+          }
+        },
+        "ru" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld сообщение пока нельзя открыть. Отправителя нет в ваших контактах на этом устройстве. Всё откроется само, если выполнить сопряжение с этим человеком."
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld сообщения пока нельзя открыть. Отправителя нет в ваших контактах на этом устройстве. Всё откроется само, если выполнить сопряжение с этим человеком."
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld сообщений пока нельзя открыть. Отправителя нет в ваших контактах на этом устройстве. Всё откроется само, если выполнить сопряжение с этим человеком."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld сообщения пока нельзя открыть. Отправителя нет в ваших контактах на этом устройстве. Всё откроется само, если выполнить сопряжение с этим человеком."
+                }
+              }
+            }
+          }
+        },
+        "zh" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 条消息暂时无法打开。发送者不在此设备的联系人中。与对方配对后会自动打开。"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Dismiss" : {
+      "comment" : "Accessibility label of the X button that hides a banner.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schließen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cerrar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fermer"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chiudi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "閉じる"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fechar"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скрыть"
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭"
           }
         }
       }

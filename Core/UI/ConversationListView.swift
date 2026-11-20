@@ -110,7 +110,10 @@ struct ConversationListView: View {
             .buttonStyle(.plain)
         }
         if store.heldCount > 0 {
-            InfoBanner(text: "\(store.heldCount) waiting from someone whose pairing hasn't finished on this device. They open on their own once it does.")
+            InfoBanner(
+                text: "\(store.heldCount) messages can't be opened yet. They are from someone who isn't in your contacts on this device. They open by themselves if you pair with them.",
+                onDismiss: { store.dismissHeld() }
+            )
         }
     }
 
@@ -386,6 +389,7 @@ private struct ErrorBanner: View {
 // A quiet, non-dismissable notice (state, not an error).
 struct InfoBanner: View {
     let text: LocalizedStringKey
+    var onDismiss: (() -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -397,6 +401,16 @@ struct InfoBanner: View {
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
+            if let onDismiss {
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.secondary)
+                        .frame(minWidth: 44, minHeight: 28, alignment: .topTrailing)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("Dismiss")
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -405,7 +419,7 @@ struct InfoBanner: View {
         .overlay(alignment: .bottom) {
             Rectangle().fill(CPTheme.hairline).frame(height: 0.5)
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: onDismiss == nil ? .combine : .contain)
     }
 }
 

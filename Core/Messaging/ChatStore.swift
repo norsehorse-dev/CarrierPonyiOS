@@ -72,6 +72,21 @@ final class ChatStore {
     /// open is up to four decrypts on the main actor, and retrying a stuck one
     /// every 5 seconds made the whole app stutter.
     @ObservationIgnored private var legacyPollCount = 0
+    /// The envelopes the waiting banner is counting right now.
+    @ObservationIgnored private var heldIDs: Set<String> = []
+    private var dismissedHeldKey: String { "cp.heldDismissed." + identity.hex }
+    private func dismissedHeld() -> Set<String> {
+        Set(UserDefaults.standard.stringArray(forKey: dismissedHeldKey) ?? [])
+    }
+
+    /// Hide the waiting banner for the envelopes it counts now. They stay on the
+    /// relay and still open by themselves if pairing finishes. The banner comes
+    /// back only when a different envelope gets stuck.
+    func dismissHeld() {
+        let dismissed = dismissedHeld().union(heldIDs)
+        UserDefaults.standard.set(Array(dismissed), forKey: dismissedHeldKey)
+        heldCount = 0
+    }
     /// Nostr events that already opened in this run of the app (see
     /// ingestNostrEnvelope). Memory only.
     @ObservationIgnored private var nostrOpened: Set<String> = []
@@ -301,7 +316,18 @@ final class ChatStore {
             let present = Set(inbox.prefix(maxPerRefresh).map(\.messageId))
             // Assign only on change: every write to an observed property re-renders
             // the views that read it, and this ran on every 5-second poll.
-            let held = failedOpenCounts.filter { present.contains($0.key) && $0.value >= Self.heldAfterAttempts }.count
+            let stuck = Set(failedOpenCounts.filter { present.contains($0.key) && $0.value >= Self.heldAfterAttempts }.keys)
+            heldIDs = stuck
+            // Dismissing the banner hides the ones it counted, nothing more. Forget
+            // a dismissed one once the relay no longer holds it, so the list stays
+            // small.
+            var dismissed = dismissedHeld()
+            let onRelay = Set(inbox.map(\.messageId))
+            if !dismissed.isSubset(of: onRelay) {
+                dismissed.formIntersection(onRelay)
+                UserDefaults.standard.set(Array(dismissed), forKey: dismissedHeldKey)
+            }
+            let held = stuck.subtracting(dismissed).count
             if held != heldCount { heldCount = held }
             pruneExpired()
         } catch {
