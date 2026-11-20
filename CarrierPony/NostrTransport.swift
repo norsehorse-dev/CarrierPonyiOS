@@ -79,6 +79,10 @@ final class NostrTransportManager {
     /// (so a window refresh replaces the filter). Matching events arrive via
     /// onNostrEvent. A large window is one filter with many #t values.
     func subscribe(addresses: [String]) {
+        // The window is handed over on every upkeep pass, changed or not. A relay
+        // answers each new REQ by sending every stored event again, so only ask
+        // when the set of addresses is different.
+        if activeSubCount > 0, Set(addresses) == Set(lastAddresses) { return }
         lastAddresses = addresses
         guard !clients.isEmpty else { return }
         let chunks = stride(from: 0, to: addresses.count, by: subChunk).map {

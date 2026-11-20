@@ -63,10 +63,18 @@ final class ChatStore {
     /// Contacts added by accepting THEIR invite whose side has not confirmed yet
     /// (nothing from them has opened here). Fingerprint hex, persisted per identity.
     private(set) var awaitingPeers: Set<String> = []
-    private static let heldAfterAttempts = 10
+    private static let heldAfterAttempts = 4
 
     private var seenMessageIDs: Set<String> = []
     private var failedOpenCounts: [String: Int] = [:]
+    /// Polls of the fingerprint inbox so far. An envelope that failed to open 3
+    /// times is only tried again on every 12th poll (about a minute): each failed
+    /// open is up to four decrypts on the main actor, and retrying a stuck one
+    /// every 5 seconds made the whole app stutter.
+    @ObservationIgnored private var legacyPollCount = 0
+    /// Nostr events that already opened in this run of the app (see
+    /// ingestNostrEnvelope). Memory only.
+    @ObservationIgnored private var nostrOpened: Set<String> = []
     // Cap envelopes decrypted per refresh. The PGP decrypt runs on the main
     // actor, so a large backlog (app offline for a while) would otherwise block
     // the UI in one pass; a bounded batch + a yield per item keeps the run loop
@@ -254,7 +262,10 @@ final class ChatStore {
         do {
             let inbox = try await relay.inbox()
             var ackIDs: [String] = []
+            legacyPollCount &+= 1
+            let retryHeld = legacyPollCount % 12 == 0
             for item in inbox.prefix(maxPerRefresh) {
+                if !retryHeld, (failedOpenCounts[item.messageId] ?? 0) >= 3 { continue }
                 await Task.yield()
                 guard let envelope = Data(base64Encoded: item.envelope) else {
                     // Malformed base64 is not retryable; ack so it stops recurring.
@@ -302,9 +313,12 @@ final class ChatStore {
     @discardableResult
     private func handle(envelope: Data, viaLan: Bool = false) -> Bool {
         let incoming: IncomingMessage
+        let openStarted = Date()
         do {
             incoming = try factory.open(envelope)
+            Self.logSlow("open", since: openStarted, bytes: envelope.count)
         } catch {
+            Self.logSlow("open-failed", since: openStarted, bytes: envelope.count)
             // Before giving up: an un-verifiable envelope may be a self-authenticating
             // channel-subscribe from a stranger (decrypt-only, no signer to verify yet).
             if tryChannelSubscribe(envelope) { return true }
@@ -1484,7 +1498,15 @@ final class ChatStore {
         let messages: [StoredMessage]
     }
 
+    /// Anything on the main actor that took 50 ms or more, so a stutter can be
+    /// traced in Console (filter CPPERF). Sizes and times only.
+    private static func logSlow(_ what: String, since start: Date, bytes: Int = 0) {
+        let ms = Int(Date().timeIntervalSince(start) * 1000)
+        if ms >= 50 { NSLog("CPPERF %@ %dms bytes=%d", what, ms, bytes) }
+    }
+
     private func persist() {
+        let persistStarted = Date()
         let stored = conversations.values.map { convo in
             StoredConversation(
                 threadID: convo.threadID,
@@ -1530,6 +1552,7 @@ final class ChatStore {
         // can run while the device is locked, and complete protection would fail
         // the write and silently lose the message.
         try? data.write(to: fileURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        Self.logSlow("persist", since: persistStarted, bytes: data.count)
     }
 
     private func load() {
@@ -1827,6 +1850,12 @@ extension ChatStore {
     /// Dedupe by message id is automatic, so a copy that also arrives via the relay is
     /// filed once.
     func ingestNostrEnvelope(mailbox: String, content: String) {
+        // Nostr relays keep events and send them again on every subscribe and
+        // reconnect, and each relay sends its own copy. One that already opened
+        // is dropped here, before any decrypting. One that did not open is not
+        // remembered, so it is tried again when it next arrives.
+        let seenKey = "\(content.count):\(content.hashValue)"
+        if nostrOpened.contains(seenKey) { return }
         guard let route = sealedAddressMap[mailbox],
               let envelope = Data(base64Encoded: content) else {
             NSLog("CPNOSTR INGEST mailbox=%@ mapped=no", String(mailbox.suffix(8)))
@@ -1841,6 +1870,8 @@ extension ChatStore {
         }
         NSLog("CPNOSTR INGEST mailbox=%@ opened=%@ newlyFiled=%@", String(mailbox.suffix(8)), opened ? "YES" : "no", seenMessageIDs.count > before ? "YES" : "no")
         guard opened else { return }
+        if nostrOpened.count >= 5000 { nostrOpened.removeAll(keepingCapacity: true) }
+        nostrOpened.insert(seenKey)
         switch route {
         case .pair(let peer, let counter):
             if var st = sealedKeys.pair(peer.hex), counter > st.receiveHigh {

@@ -257,6 +257,32 @@ final class PGPonyCryptoEngine: CryptoEngine {
     private final class UnlockedKeys: @unchecked Sendable {
         private let lock = NSLock()
         private var keys: [String: CompositeKEMDecryptionKey] = [:]
+        // The classic keys of the same identities. Unlocking a protected secret
+        // key runs its passphrase KDF, a third of a second on a phone, and that
+        // ran on the main actor for every message opened and every relay login
+        // signed, which made the whole app stutter.
+        private var decryption: [String: Cv25519DecryptionKey] = [:]
+        private var signing: [String: Ed25519SigningInfo] = [:]
+
+        func decryptionKey(for id: String) -> Cv25519DecryptionKey? {
+            lock.lock(); defer { lock.unlock() }
+            return decryption[id]
+        }
+
+        func keep(_ key: Cv25519DecryptionKey, for id: String) {
+            lock.lock(); defer { lock.unlock() }
+            decryption[id] = key
+        }
+
+        func signingInfo(for id: String) -> Ed25519SigningInfo? {
+            lock.lock(); defer { lock.unlock() }
+            return signing[id]
+        }
+
+        func keep(_ info: Ed25519SigningInfo, for id: String) {
+            lock.lock(); defer { lock.unlock() }
+            signing[id] = info
+        }
 
         func key(for id: String) -> CompositeKEMDecryptionKey? {
             lock.lock(); defer { lock.unlock() }
@@ -271,6 +297,8 @@ final class PGPonyCryptoEngine: CryptoEngine {
         func removeAll() {
             lock.lock(); defer { lock.unlock() }
             keys.removeAll()
+            decryption.removeAll()
+            signing.removeAll()
         }
     }
 
@@ -302,16 +330,33 @@ final class PGPonyCryptoEngine: CryptoEngine {
     // primary, v4 and v6 alike. An imported v6 key with a signing subkey signs
     // with that subkey.
     private func mySigningInfo() throws -> Ed25519SigningInfo {
-        version == 6
-            ? try OpenPGPPacketParser.ed25519SigningInfo(fromV6SecretKey: secretKey, passphrase: passphrase())
-            : try OpenPGPPacketParser.ed25519SigningInfo(fromSecretKey: secretKey, passphrase: passphrase())
+        let pass = passphrase()
+        let id = unlockID(pass)
+        if let held = Self.unlocked.signingInfo(for: id) { return held }
+        let info = version == 6
+            ? try OpenPGPPacketParser.ed25519SigningInfo(fromV6SecretKey: secretKey, passphrase: pass)
+            : try OpenPGPPacketParser.ed25519SigningInfo(fromSecretKey: secretKey, passphrase: pass)
+        Self.unlocked.keep(info, for: id)
+        return info
+    }
+
+    /// Names one identity under one passphrase in the unlocked-key store, so a
+    /// changed passphrase never finds a key unlocked under the old one.
+    private func unlockID(_ pass: String?) -> String {
+        let digest = SHA256.hash(data: Data((pass ?? "").utf8)).map { String(format: "%02x", $0) }.joined()
+        return fingerprint.hex + ":" + digest
     }
 
     // Our own decryption key. v4 -> Cv25519 subkey; v6 -> X25519 subkey.
     private func myDecryptionKey() throws -> Cv25519DecryptionKey {
-        version == 6
-            ? try OpenPGPPacketParser.x25519DecryptionKey(fromV6SecretKey: secretKey, passphrase: passphrase())
-            : try OpenPGPPacketParser.cv25519DecryptionKey(fromSecretKey: secretKey, passphrase: passphrase())
+        let pass = passphrase()
+        let id = unlockID(pass)
+        if let held = Self.unlocked.decryptionKey(for: id) { return held }
+        let key = version == 6
+            ? try OpenPGPPacketParser.x25519DecryptionKey(fromV6SecretKey: secretKey, passphrase: pass)
+            : try OpenPGPPacketParser.cv25519DecryptionKey(fromSecretKey: secretKey, passphrase: pass)
+        Self.unlocked.keep(key, for: id)
+        return key
     }
 
     // A recipient's encryption key, routed by the recipient's own key version

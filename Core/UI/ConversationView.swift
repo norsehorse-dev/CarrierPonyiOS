@@ -35,6 +35,9 @@ struct ConversationView: View {
     @State private var showingCamera = false
     @State private var photoItems: [PhotosPickerItem] = []
     @State private var showingPhotos = false
+    /// Whether the end of the thread is on screen. A new message only pulls the
+    /// list down when it is, so reading older messages is not interrupted.
+    @State private var atBottom = true
 
     private var conversation: Conversation? {
         store.conversations.values.first { $0.peer == contact.fingerprint }
@@ -181,6 +184,8 @@ struct ConversationView: View {
                             }
                         }
                         Color.clear.frame(height: 8).id(bottomAnchor)
+                            .onAppear { atBottom = true }
+                            .onDisappear { atBottom = false }
                     }
                     .padding(.horizontal, 12)
                     .padding(.top, 8)
@@ -188,6 +193,10 @@ struct ConversationView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: messages.count) { _, _ in
+                // Jumping to the end from far up makes the lazy stack build every
+                // row on the way, which froze the list for seconds in a long
+                // thread. Follow only when already at the end, or for my own send.
+                guard atBottom || messages.last?.direction == .outgoing else { return }
                 withAnimation(.easeOut(duration: 0.25)) {
                     proxy.scrollTo(bottomAnchor, anchor: .bottom)
                 }
@@ -215,7 +224,8 @@ struct ConversationView: View {
         let groups = Dictionary(grouping: messages) { msg in
             cal.startOfDay(for: Date(timeIntervalSince1970: TimeInterval(msg.sentAt)))
         }
-        return groups.keys.sorted().map { ($0, groups[$0]!.sorted { $0.sentAt < $1.sentAt }) }
+        // messages is already in time order and grouping keeps that order.
+        return groups.keys.sorted().map { ($0, groups[$0]!) }
     }
 
     // MARK: - Composer
@@ -520,8 +530,12 @@ struct AttachmentImageView: View {
     @State private var showingFull = false
 
     var body: some View {
-        Group {
-            if let image {
+        // A row scrolled away and back loses its state. The cache gives it the
+        // picture again at once, so the bubble does not flash a placeholder and
+        // change size under the finger.
+        let shown = image ?? AttachmentThumbnail.cached(path: attachment.localPath, maxPixel: 640)
+        return Group {
+            if let image = shown {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
@@ -633,8 +647,25 @@ struct PendingChip: View {
 }
 
 // Downsampled thumbnail via ImageIO, so large images never fully decode for the bubble.
+// Nothing here touches the UI, so it is taken off the main actor: decoding a
+// photo on the main actor while the list scrolls is what made scrolling stick.
 enum AttachmentThumbnail {
-    static func make(path: String, maxPixel: Int) -> UIImage? {
+    nonisolated(unsafe) private static let cache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.countLimit = 150
+        return cache
+    }()
+
+    nonisolated private static func key(_ path: String, _ maxPixel: Int) -> NSString {
+        "\(maxPixel)|\(path)" as NSString
+    }
+
+    nonisolated static func cached(path: String, maxPixel: Int) -> UIImage? {
+        cache.object(forKey: key(path, maxPixel))
+    }
+
+    nonisolated static func make(path: String, maxPixel: Int) -> UIImage? {
+        if let hit = cache.object(forKey: key(path, maxPixel)) { return hit }
         let url = AttachmentStore.url(for: path)
         guard let src = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
         let options: [CFString: Any] = [
@@ -643,7 +674,10 @@ enum AttachmentThumbnail {
             kCGImageSourceThumbnailMaxPixelSize: maxPixel
         ]
         guard let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, options as CFDictionary) else { return nil }
-        return UIImage(cgImage: cg)
+        let image = UIImage(cgImage: cg)
+        // Bubble and file-list sizes only. Full screen images are too big to keep.
+        if maxPixel <= 640 { cache.setObject(image, forKey: key(path, maxPixel)) }
+        return image
     }
 }
 

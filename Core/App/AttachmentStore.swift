@@ -7,7 +7,7 @@ import Foundation
 
 enum AttachmentStore {
 
-    static let directory: URL = {
+    nonisolated static let directory: URL = {
         let base = (try? FileManager.default.url(
             for: .applicationSupportDirectory, in: .userDomainMask,
             appropriateFor: nil, create: true
@@ -26,7 +26,7 @@ enum AttachmentStore {
         return name
     }
 
-    static func url(for localPath: String) -> URL {
+    nonisolated static func url(for localPath: String) -> URL {
         directory.appendingPathComponent(localPath)
     }
 
