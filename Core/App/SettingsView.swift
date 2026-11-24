@@ -166,6 +166,14 @@ struct SettingsView: View {
                     }
                 }
 
+                Section("About") {
+                    LabeledContent {
+                        Text(verbatim: Self.versionLine).textSelection(.enabled)
+                    } label: {
+                        Label("Version", systemImage: "info.circle")
+                    }
+                }
+
                 Section("Reset") {
                     Button {
                         confirmResetOnboarding = true
@@ -268,6 +276,14 @@ struct SettingsView: View {
         ("ja", "日本語"),
         ("ru", "Русский")
     ]
+
+    /// The installed version and build, read from the bundle, e.g. "4.0.2 (1)".
+    private static var versionLine: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        return "\(version) (\(build))"
+    }
 
     @ViewBuilder
     private var internetDirectSection: some View {
