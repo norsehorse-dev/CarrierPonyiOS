@@ -98,6 +98,12 @@ final class ChatStore {
     private let maxPerRefresh = 50
     private var pollTask: Task<Void, Never>?
     private let fileURL: URL
+    /// Text typed but not sent, per conversation, so it survives leaving the
+    /// thread and the app being ended in the background. Keyed by draftKey /
+    /// groupDraftKey. Not observed: typing must not redraw every view of the store.
+    @ObservationIgnored private var drafts: [String: String] = [:]
+    @ObservationIgnored private var draftsSaveTask: Task<Void, Never>?
+    private let draftsURL: URL
 
     init(
         identity: Fingerprint,
@@ -143,7 +149,9 @@ final class ChatStore {
             appropriateFor: nil, create: true
         )) ?? FileManager.default.temporaryDirectory
         self.fileURL = dir.appendingPathComponent("carrierpony-conversations-\(identity.hex).json")
+        self.draftsURL = dir.appendingPathComponent("carrierpony-drafts-\(identity.hex).json")
         load()
+        loadDrafts()
         awaitingPeers = Set(UserDefaults.standard.stringArray(forKey: awaitingKey) ?? [])
     }
 
@@ -216,6 +224,10 @@ final class ChatStore {
         groupMessages = [:]
         seenMessageIDs = []
         try? FileManager.default.removeItem(at: fileURL)
+        draftsSaveTask?.cancel()
+        draftsSaveTask = nil
+        drafts = [:]
+        try? FileManager.default.removeItem(at: draftsURL)
         awaitingPeers = []
         heldCount = 0
         UserDefaults.standard.removeObject(forKey: awaitingKey)
@@ -654,6 +666,57 @@ final class ChatStore {
         }
         conversations[threadID] = nil
         persist()
+        setDraft("", for: Self.draftKey(peer: conversation.peer))
+    }
+
+    // MARK: - Drafts
+
+    static func draftKey(peer: Fingerprint) -> String { "p:" + peer.hex }
+    static func groupDraftKey(_ groupID: String) -> String { "g:" + groupID }
+
+    /// The unsent text for a conversation, or "" when there is none.
+    func draft(for key: String) -> String { drafts[key] ?? "" }
+
+    /// Remember the unsent text for a conversation. An empty text removes it.
+    /// Written to disk shortly after typing stops; saveDraftsNow() writes at once.
+    func setDraft(_ text: String, for key: String) {
+        if text.isEmpty {
+            guard drafts.removeValue(forKey: key) != nil else { return }
+        } else {
+            guard drafts[key] != text else { return }
+            drafts[key] = text
+        }
+        draftsSaveTask?.cancel()
+        draftsSaveTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(700))
+            guard !Task.isCancelled else { return }
+            self?.draftsSaveTask = nil
+            self?.persistDrafts()
+        }
+    }
+
+    /// Write drafts to disk now. Called when a thread closes and when the app
+    /// goes to the background.
+    func saveDraftsNow() {
+        guard let waiting = draftsSaveTask else { return }
+        waiting.cancel()
+        draftsSaveTask = nil
+        persistDrafts()
+    }
+
+    private func persistDrafts() {
+        if drafts.isEmpty {
+            try? FileManager.default.removeItem(at: draftsURL)
+            return
+        }
+        guard let data = try? JSONEncoder().encode(drafts) else { return }
+        try? data.write(to: draftsURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    }
+
+    private func loadDrafts() {
+        guard let data = try? Data(contentsOf: draftsURL),
+              let saved = try? JSONDecoder().decode([String: String].self, from: data) else { return }
+        drafts = saved
     }
 
     /// Send a control op (e.g. "delete") to the peer over the relay.
@@ -1067,6 +1130,7 @@ final class ChatStore {
         groups[groupID] = nil
         groupMessages[groupID] = nil
         persist()
+        setDraft("", for: Self.groupDraftKey(groupID))
     }
 
     private func distributeGroupKey(_ group: ChatGroup, key: SymmetricKey, includeSelf: Bool = true) async {
@@ -2264,6 +2328,7 @@ extension ChatStore {
         groups[groupID] = nil
         groupMessages[groupID] = nil
         persist()
+        setDraft("", for: Self.groupDraftKey(groupID))
     }
 
     /// Admin side: open an un-verifiable envelope as a self-authenticating

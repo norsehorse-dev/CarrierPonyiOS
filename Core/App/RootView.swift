@@ -118,6 +118,7 @@ struct RootView: View {
                     Task { await app.start() }
                 }
             case .background:
+                app.store?.saveDraftsNow()
                 app.stop()
                 app.lockForBackground()
             default:

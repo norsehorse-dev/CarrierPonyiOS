@@ -269,6 +269,11 @@ struct ConversationView: View {
                 }
 
                 TextField("Message", text: $draft, axis: .vertical)
+                    // The unsent text lives in the store so it survives leaving
+                    // the thread and the app being ended in the background.
+                    .onAppear { draft = store.draft(for: ChatStore.draftKey(peer: contact.fingerprint)) }
+                    .onChange(of: draft) { _, text in store.setDraft(text, for: ChatStore.draftKey(peer: contact.fingerprint)) }
+                    .onDisappear { store.saveDraftsNow() }
                     .lineLimit(1...5)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 9)

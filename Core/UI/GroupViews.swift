@@ -434,6 +434,11 @@ struct GroupConversationView: View {
                         .frame(width: 38, height: 38)
                 }
                 TextField("Message", text: $draft, axis: .vertical)
+                    // The unsent text lives in the store so it survives leaving
+                    // the thread and the app being ended in the background.
+                    .onAppear { draft = store.draft(for: ChatStore.groupDraftKey(groupID)) }
+                    .onChange(of: draft) { _, text in store.setDraft(text, for: ChatStore.groupDraftKey(groupID)) }
+                    .onDisappear { store.saveDraftsNow() }
                     .lineLimit(1...5)
                     .padding(.horizontal, 14).padding(.vertical, 9)
                     .background(CPTheme.composerField, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
